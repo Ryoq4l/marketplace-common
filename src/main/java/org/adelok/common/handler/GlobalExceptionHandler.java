@@ -1,14 +1,18 @@
-package com.adelok.wallet_service.exception;
+package org.adelok.common.handler;
 
-import com.adelok.wallet_service.dto.error.ErrorCode;
-import com.adelok.wallet_service.dto.error.ErrorResponse;
+import io.jsonwebtoken.JwtException;
+import org.adelok.common.error.ErrorCode;
+import org.adelok.common.error.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.adelok.common.exception.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 
@@ -86,5 +90,75 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 null);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handle(IllegalArgumentException exception, HttpServletRequest request) {
+        log.warn("STEAMID CANT BE NULL");
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                ErrorCode.BAD_REQUEST,
+                HttpStatus.BAD_REQUEST,
+                "PLEASE, ENTER STEAM ID",
+                request.getRequestURI(),
+                null);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handle(UsernameNotFoundException exception, HttpServletRequest request) {
+        log.warn("THERES NO USER WITH THIS USERNAME");
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                ErrorCode.UNAUTHORIZED,
+                HttpStatus.UNAUTHORIZED,
+                "USER NOT FOUND WITH THIS USERNAME",
+                request.getRequestURI(),
+                null);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ErrorResponse> handle(JwtException exception, HttpServletRequest request) {
+        log.warn("INVALID TOKEN");
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                ErrorCode.UNAUTHORIZED,
+                HttpStatus.UNAUTHORIZED,
+                "INVALID TOKEN, MAYBE YOUR TOKEN IS EXPIRED",
+                request.getRequestURI(),
+                null);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ErrorResponse> handle(InvalidTokenException exception, HttpServletRequest request) {
+        log.warn("INVALID REFRESH TOKEN {} {}", request.getRequestURI(), exception.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                ErrorCode.UNAUTHORIZED,
+                HttpStatus.UNAUTHORIZED,
+                "INVALID REFRESH TOKEN",
+                request.getRequestURI(),
+                null);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handle(ResponseStatusException exception, HttpServletRequest request) {
+        log.warn("Http error: {}", exception.getReason());
+        ErrorCode code = switch (exception.getStatusCode().value()) {
+            case 404 -> ErrorCode.NOT_FOUND;
+            case 409 -> ErrorCode.BAD_REQUEST;
+            case 403 -> ErrorCode.FORBIDDEN;
+            default -> ErrorCode.INTERNAL_ERROR;
+        };
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                code,
+                HttpStatus.valueOf(exception.getStatusCode().value()),
+                exception.getReason(),
+                request.getRequestURI(),
+                null
+        );
+        return ResponseEntity.status(exception.getStatusCode()).body(error);
     }
 }

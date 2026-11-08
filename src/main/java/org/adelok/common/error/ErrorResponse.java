@@ -1,4 +1,4 @@
-package com.adelok.wallet_service.dto.error;
+package org.adelok.common.error;
 
 import org.springframework.http.HttpStatus;
 

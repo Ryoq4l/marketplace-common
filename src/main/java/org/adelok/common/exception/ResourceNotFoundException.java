@@ -1,4 +1,4 @@
-package com.adelok.wallet_service.exception;
+package org.adelok.common.exception;
 
 public class ResourceNotFoundException extends RuntimeException {
     public ResourceNotFoundException(String message) {
